@@ -1,0 +1,250 @@
+// Copyright 2021 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package aviary;
+
+import "google/protobuf/struct.proto";
+
+// An interest group ad.
+//
+// Next tag: 3
+message InterestGroupAd {
+  // The URL of the ad code (HTML or web bundle).
+  string render_url = 1;
+
+  // Arbitrary ad metadata provided by the interest group owner.
+  google.protobuf.Struct ad_metadata = 2;
+}
+
+// An interest group that a browser joined.
+message InterestGroup {
+  // Interest group owner domain.
+  string owner = 1;
+
+  // Interest group name.
+  string name = 2;
+
+  // The URL of the bidding logic JavaScript to use for the interest group.
+  string bidding_logic_url = 3;
+
+  // Ads associated with the interest group.
+  repeated InterestGroupAd ads = 4;
+
+  // The URL to receive daily updates from for the interest group.
+  string daily_update_url = 5;
+
+  // The base URL of the buyer's server that returns trusted bidding signals.
+  string trusted_bidding_signals_url = 6;
+
+  // Trusted bidding signals keys for the interest group.
+  repeated string trusted_bidding_signals_keys = 7;
+
+  // Interest group user bidding signals stored by the browser.
+  google.protobuf.Struct user_bidding_signals = 8;
+}
+
+// The arguments to the FLEDGE bidding function.
+//
+// Next tag: 5
+message BiddingFunctionInput {
+  // From
+  // https://github.com/WICG/turtledove/blob/master/FLEDGE.md#32-on-device-bidding:
+  //
+  // The interest group object, as saved during joinAdInterestGroup() and
+  // perhaps updated via the daily_update_url.
+  InterestGroup interest_group = 1;
+
+  // From
+  // https://github.com/WICG/turtledove/blob/master/FLEDGE.md#32-on-device-bidding:
+  //
+  // Auction signals as provided by the seller in the call to runAdAuction().
+  // This is the opportunity for the seller to provide information about the
+  // page context (ad size, publisher ID, etc), the type of auction (first-price
+  // vs second-price), and so on.
+  google.protobuf.Struct auction_signals = 2;
+
+  // From
+  // https://github.com/WICG/turtledove/blob/master/FLEDGE.md#32-on-device-bidding:
+  //
+  // The value for this specific buyer as taken from the auction config passed
+  // to runAdAuction(). This can include contextual signals about the page that
+  // come from the buyer's server, if the seller is an SSP which performs a
+  // real-time bidding call to buyer servers and pipes the response back, or if
+  // the publisher page contacts the buyer's server directly.
+  google.protobuf.Struct per_buyer_signals = 3;
+
+  // From
+  // https://github.com/WICG/turtledove/blob/main/FLEDGE.md#32-on-device-bidding:
+  //
+  // An object whose keys are the trusted_bidding_signals_keys for the interest
+  // group, and whose values are those returned in the trusted_bidding_signals
+  // request.
+  map<string, google.protobuf.Value> trusted_bidding_signals = 4;
+
+  // From
+  // https://github.com/WICG/turtledove/blob/master/FLEDGE.md#32-on-device-bidding:
+  //
+  // An object constructed by the browser, containing information that the
+  // browser knows, and which the buyer's auction script might want to use or
+  // verify. This can include information about both the context (e.g. the true
+  // hostname of the current page, which the seller could otherwise lie about)
+  // and about the interest group itself (e.g. times when it previously won the
+  // auction, to allow on-device frequency capping).
+  google.protobuf.Struct browser_signals = 5;
+}
+
+// Next tag: 4
+message BiddingFunctionOutput {
+  // From
+  // https://github.com/WICG/turtledove/blob/master/FLEDGE.md#32-on-device-bidding:
+  //
+  // Arbitrary metadata about the ad which this interest group wants to show.
+  // The seller uses this information in its auction and decision logic.
+  google.protobuf.Struct ad = 1;
+  // From
+  // https://github.com/WICG/turtledove/blob/master/FLEDGE.md#32-on-device-bidding:
+  //
+  // A numerical bid that will enter the auction. The seller must be in a
+  // position to compare bids from different buyers, therefore bids must be in
+  // some seller-chosen unit (e.g. "USD per thousand"). If the bid is zero or
+  // negative, then this interest group will not participate in the seller's
+  // auction at all. With this mechanism, the buyer can implement any advertiser
+  // rules for where their ads may or may not appear.
+  double bid = 2;
+  // From
+  // https://github.com/WICG/turtledove/blob/master/FLEDGE.md#32-on-device-bidding:
+  //
+  // A URL which will be rendered to display the creative if this bid wins the
+  // auction.
+  string render_url = 3;
+}
+
+// From
+// https://github.com/WICG/turtledove/blob/main/FLEDGE.md#21-initiating-an-on-device-auction:
+//
+// Publisher auction configuration object passed to navigator.runAdAuction().
+//
+// Next tag: 8
+message AuctionConfiguration {
+  // The seller's origin.
+  string seller = 1;
+  // The location of the seller's ad scoring function.
+  string decision_logic_url = 2;
+  // From
+  // https://github.com/WICG/turtledove/blob/main/FLEDGE.md#22-auction-participants:
+  //
+  // Each interest group the browser has joined and whose owner is in the list
+  // of interest_group_buyers will have an opportunity to bid in the auction.
+  repeated string interest_group_buyers = 3;
+  // From
+  // https://github.com/WICG/turtledove/blob/main/FLEDGE.md#22-auction-participants:
+  //
+  // The list of additional_bids is meant to allow a second way for ads to
+  // participate in this on-device auction.
+  repeated google.protobuf.Struct additional_bids = 4;
+  // From
+  // https://github.com/WICG/turtledove/blob/main/FLEDGE.md#23-scoring-bids:
+  //
+  // Used exclusively for passing information into the seller's ad scoring
+  // function. This can include information based on looking up publisher
+  // settings, based on making a contextual ad request, and so on.
+  google.protobuf.Struct seller_signals = 5;
+  // From
+  // https://github.com/WICG/turtledove/blob/main/FLEDGE.md#21-initiating-an-on-device-auction:
+  //
+  // The signals made available to everyone (buyers and the seller) passed as
+  // arguments to the appropriate functions that run inside worklets in the
+  // FLEDGE auction.
+  google.protobuf.Struct auction_signals = 6;
+  // From
+  // https://github.com/WICG/turtledove/blob/main/FLEDGE.md#32-on-device-bidding,
+  // https://github.com/WICG/turtledove/blob/main/FLEDGE.md#21-initiating-an-on-device-auction:
+  //
+  // The signals made available to the buyers in the auction, keyed by each
+  // buyer's origin.
+  //
+  // This can include contextual signals about the page that
+  // come from the buyer's server, if the seller is an SSP which performs a
+  // real-time bidding call to buyer servers and pipes the response back, or if
+  // the publisher page contacts the buyer's server directly.
+  map<string, google.protobuf.Struct> per_buyer_signals = 7;
+}
+
+// The arguments to the FLEDGE seller's ad scoring function. See
+// https://github.com/WICG/turtledove/blob/main/FLEDGE.md#23-scoring-bids.
+//
+// Next tag: 6
+message AdScoringFunctionInput {
+  // From
+  // https://github.com/WICG/turtledove/blob/main/FLEDGE.md#23-scoring-bids:
+  //
+  // Arbitrary ad metadata provided by the buyer.
+  google.protobuf.Struct ad_metadata = 1;
+  // From
+  // https://github.com/WICG/turtledove/blob/main/FLEDGE.md#23-scoring-bids:
+  //
+  // A numerical bid value. It is provided by the buyer's bidding function.
+  double bid = 2;
+  // From
+  // https://github.com/WICG/turtledove/blob/main/FLEDGE.md#23-scoring-bids:
+  //
+  // The auction configuration object passed to navigator.runAdAuction().
+  AuctionConfiguration auction_config = 3;
+  // From
+  // https://github.com/WICG/turtledove/blob/main/FLEDGE.md#23-scoring-bids:
+  //
+  // A value retrieved from a real-time trusted server chosen by the seller and
+  // reflecting the seller's opinion of this particular creative, as further
+  // described in 3.1 Fetching Real-Time Data from a Trusted Server below. (In
+  // the case of ads composed of multiple pieces this should instead be some
+  // collection of values, structure TBD.)
+  //
+  // In the case of a FLEDGE auction worklet execution in a trusted server-side
+  // environment, these signals may also be stored on the same trusted server
+  // without the need to contact the seller's dedicated trusted server in
+  // real-time.
+  google.protobuf.Struct trusted_scoring_signals = 4;
+  // From
+  // https://github.com/WICG/turtledove/blob/main/FLEDGE.md#23-scoring-bids:
+  //
+  // An object constructed by the browser, containing information that the
+  // browser knows and which the seller's auction script might want to
+  // verify, for example:
+  //
+  // { 'top_window_hostname': 'www.example-publisher.com',
+  //   'interest_group_owner': 'www.example-dsp.com',
+  //   'interest_group_name': 'womens-running-shoes',
+  //   'ad_render_fingerprint': 'M0rNy1D5RVowjnpa',
+  //   'bidding_duration_msec': 12
+  // }
+  google.protobuf.Struct browser_signals = 5;
+}
+
+// The return value of the FLEDGE seller's ad scoring function. See
+// https://github.com/WICG/turtledove/blob/main/FLEDGE.md#23-scoring-bids.
+// Currently, only the desirability score is included; however, in future, the
+// seller's ad scoring function may need to return additional data, such as
+// information useful in reporting.
+//
+// Next tag: 2
+message AdScoringFunctionOutput {
+  // The number indicating how desirable this ad is. Any value that is zero or
+  // negative indicates that the ad cannot win the auction. This could be used,
+  // for example, to eliminate any interest-group-targeted ad that would not
+  // beat a contextually-targeted candidate. The winner of the auction is the
+  // ad object which was given the highest score.
+  double desirability_score = 1;
+}

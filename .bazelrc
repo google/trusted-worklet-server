@@ -1,0 +1,1 @@
+build --cxxopt=-std=c++17 --cxxopt=-lstdc++fs --cxxopt=-DV8_COMPRESS_POINTERS

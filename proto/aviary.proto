@@ -1,0 +1,128 @@
+// Copyright 2021 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package aviary;
+
+import "google/protobuf/struct.proto";
+import "google/api/annotations.proto";
+import "proto/bidding_function.proto";
+
+// Runs interest group ad auctions server-side.
+service AdAuctions {
+  // Computes a bid for a interest group ad.
+  rpc ComputeBid(ComputeBidRequest) returns (BiddingFunctionOutput) {
+    option (google.api.http) = {
+      post: "/v1alpha/adAuctions:computeBid"
+    };
+  }
+
+  // Runs an interest group ad auction and returns a winner, if any.
+  rpc RunAdAuction(RunAdAuctionRequest) returns (RunAdAuctionResponse) {
+    option (google.api.http) = {
+      post: "/v1alpha/adAuctions:run"
+    };
+  }
+}
+
+// A request message to compute a bid by invoking a bidding function.
+//
+// Next tag: 3
+message ComputeBidRequest {
+  // The name of the bidding function to invoke.
+  string bidding_function_name = 1;
+
+  // The input arguments to the bidding function.
+  BiddingFunctionInput input = 2;
+}
+
+// Information about an interest group required for running an interest group ad
+// auction. See
+// https://github.com/WICG/turtledove/blob/main/FLEDGE.md#32-on-device-bidding.
+//
+// Next tag: 8
+message InterestGroupAuctionState {
+  // Interest group owner domain.
+  string owner = 1;
+
+  // Interest group name.
+  string name = 2;
+
+  // The URL of the bidding logic JavaScript to use for this interest group.
+  string bidding_logic_url = 3;
+
+  // Real-time buyer's trusted bidding signals provided before the auction.
+  map<string, google.protobuf.Value> trusted_bidding_signals = 4;
+
+  // Interest group user bidding signals stored by the browser.
+  google.protobuf.Struct user_bidding_signals = 5;
+
+  // Ads associated with this interest group.
+  repeated InterestGroupAd ads = 6;
+
+  // Browser signals for this interest group.
+  google.protobuf.Struct browser_signals = 7;
+}
+
+// A request message for running an interest group ad auction.
+//
+// Next tag: 4
+message RunAdAuctionRequest {
+  // Interest groups to participate in the interest group auction.
+  repeated InterestGroupAuctionState interest_groups = 1;
+
+  // Auction configuration.
+  AuctionConfiguration auction_configuration = 2;
+
+  // Real-time seller's trusted scoring signals for each ad keyed by ad render
+  // URL provided before the auction.
+  map<string, google.protobuf.Struct> trusted_scoring_signals = 3;
+}
+
+// A scored interest group bid. See
+// https://github.com/WICG/turtledove/blob/main/FLEDGE.md#23-scoring-bids.
+//
+// Next tag: 6
+message ScoredInterestGroupBid {
+  // The URL of the ad code (HTML or web bundle) that will be shown if the bid
+  // wins determined by the buyer's bidding function.
+  string render_url = 1;
+
+  // The domain name of the interest group owner.
+  string interest_group_owner = 2;
+
+  // The name of the interest group.
+  string interest_group_name = 3;
+
+  // The bid price as determined by the buyer's bidding function.
+  double bid_price = 4;
+
+  // The desirability score as determined by the seller's ad scoring function.
+  double desirability_score = 5;
+}
+
+// A response message for running an interest group ad auction.
+//
+// Next tag: 3
+message RunAdAuctionResponse {
+  // The winner of the interest group auction.
+  // Empty if no interest group bid won.
+  ScoredInterestGroupBid winning_bid = 1;
+
+  // Losing bids in the decreasing desirability score order. Includes both
+  // losing bids and bids that were rejected by the seller's ad scoring function
+  // with a non-positive desirability score.
+  repeated ScoredInterestGroupBid losing_bids = 2;
+}
